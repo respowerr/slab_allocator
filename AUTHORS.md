@@ -1,3 +1,3 @@
 # Authors
-- Pizzuti Enzo
-- Noiret Jules 
+- Pizzuti Enzo (SnikiEP)
+- Noiret Jules (Respowerr)
