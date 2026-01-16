@@ -1,12 +1,6 @@
-#![no_std]
-#![feature(allocator_api)]
-#![feature(const_mut_refs)]
+#![cfg_attr(not(test), no_std)]
 
 pub mod slab;
-pub mod cache;
-pub mod allocator;
 
 #[cfg(test)]
 mod tests;
-
-pub use allocator::SlabAllocator;
