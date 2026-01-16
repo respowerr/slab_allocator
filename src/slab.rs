@@ -52,6 +52,34 @@ impl Slab {
         self.free_list_head = Some(NonNull::new_unchecked(memory.as_ptr() as *mut FreeObject));
     }
     
+    pub unsafe fn alloc(&mut self) -> Option<NonNull<u8>> {
+        if self.is_full() {
+            return None;
+        }
+        
+        let free_obj = self.free_list_head?;
+        let next = (*free_obj.as_ptr()).next;
+        
+        self.free_list_head = next;
+        self.free_count -= 1;
+        
+        Some(free_obj.cast())
+    }
+    
+    pub unsafe fn dealloc(&mut self, ptr: NonNull<u8>) {
+        let obj = ptr.cast::<FreeObject>().as_ptr();
+        (*obj).next = self.free_list_head;
+        self.free_list_head = Some(NonNull::new_unchecked(obj));
+        self.free_count += 1;
+    }
+    
+    pub fn contains(&self, ptr: NonNull<u8>) -> bool {
+        let start = self.memory.as_ptr() as usize;
+        let end = start + (self.capacity * self.object_size);
+        let addr = ptr.as_ptr() as usize;
+        addr >= start && addr < end
+    }
+    
     pub fn free_count(&self) -> usize { self.free_count }
     pub fn capacity(&self) -> usize { self.capacity }
     pub fn object_size(&self) -> usize { self.object_size }
