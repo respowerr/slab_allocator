@@ -9,6 +9,7 @@ pub struct Slab {
     capacity: usize,
     free_count: usize,
     free_list_head: Option<NonNull<FreeObject>>,
+    pub next: Option<&'static mut Slab>,
 }
 
 #[repr(C)]
@@ -31,6 +32,7 @@ impl Slab {
             capacity,
             free_count: 0,
             free_list_head: None,
+            next: None,
         }
     }
     
