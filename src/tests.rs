@@ -117,3 +117,21 @@ fn test_allocator_size_selection() {
     assert_eq!(allocator.object_size_for(Layout::from_size_align(100, 1).unwrap()), Some(128));
     assert_eq!(allocator.object_size_for(Layout::from_size_align(1025, 1).unwrap()), None);
 }
+
+#[test]
+fn test_cache_dealloc() {
+    let mut cache = SCache::new(64);
+    unsafe {
+        let layout = Layout::from_size_align_unchecked(4096, 8);
+        let ptr = System.alloc(layout);
+        let mut slab = Slab::new(64, 4096);
+        slab.init(NonNull::new_unchecked(ptr));
+        let slab_static: &'static mut Slab = core::mem::transmute(&mut slab);
+        cache.insert(slab_static);
+        
+        let obj = cache.alloc().unwrap();
+        assert!(cache.dealloc(obj));
+        
+        System.dealloc(ptr, layout);
+    }
+}

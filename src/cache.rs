@@ -26,14 +26,35 @@ impl SCache {
     pub fn alloc(&mut self) -> Option<NonNull<u8>> {
         let slab = self.partial.as_mut()?;
         let ptr: Option<NonNull<u8>> = unsafe { slab.alloc() };
-
         if ptr.is_some() && slab.is_full() {
             let full_slab = self.partial.take().unwrap();
             self.partial = full_slab.next.take();
             full_slab.next = self.full.take();
             self.full = Some(full_slab);
         }
-
         ptr
+    }
+
+    /// # Safety
+    /// `ptr` must belong to a slab in this cache
+    pub unsafe fn dealloc(&mut self, ptr: NonNull<u8>) -> bool {
+        let mut current = self.partial.as_deref_mut();
+        while let Some(slab) = current {
+            if slab.contains(ptr) {
+                slab.dealloc(ptr);
+                return true;
+            }
+            current = slab.next.as_deref_mut();
+        }
+
+        let mut current = self.full.as_deref_mut();
+        while let Some(slab) = current {
+            if slab.contains(ptr) {
+                slab.dealloc(ptr);
+                return true;
+            }
+            current = slab.next.as_deref_mut();
+        }
+        false
     }
 }
