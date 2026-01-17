@@ -36,6 +36,8 @@ impl Slab {
         }
     }
     
+    /// # Safety
+    /// `memory` must point to valid memory of at least `capacity * object_size` bytes
     pub unsafe fn init(&mut self, memory: NonNull<u8>) {
         self.memory = memory;
         self.free_count = self.capacity;
@@ -54,6 +56,8 @@ impl Slab {
         self.free_list_head = Some(NonNull::new_unchecked(memory.as_ptr() as *mut FreeObject));
     }
     
+    /// # Safety
+    /// Caller must ensure the slab is initialized
     pub unsafe fn alloc(&mut self) -> Option<NonNull<u8>> {
         if self.is_full() {
             return None;
@@ -68,6 +72,9 @@ impl Slab {
         Some(free_obj.cast())
     }
     
+    /// # Safety
+    /// `ptr` must have been allocated from this slab
+    /// `ptr` must not be freed twice
     pub unsafe fn dealloc(&mut self, ptr: NonNull<u8>) {
         let obj = ptr.cast::<FreeObject>().as_ptr();
         (*obj).next = self.free_list_head;
@@ -87,4 +94,12 @@ impl Slab {
     pub fn object_size(&self) -> usize { self.object_size }
     pub fn is_full(&self) -> bool { self.free_count == 0 }
     pub fn is_empty(&self) -> bool { self.free_count == self.capacity }
+    
+    pub fn used_count(&self) -> usize {
+        self.capacity - self.free_count
+    }
+    
+    pub fn is_partial(&self) -> bool {
+        self.free_count > 0 && self.free_count < self.capacity
+    }
 }

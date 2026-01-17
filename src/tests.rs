@@ -135,3 +135,64 @@ fn test_cache_dealloc() {
         System.dealloc(ptr, layout);
     }
 }
+
+#[test]
+fn test_slab_partial_state() {
+    let mut slab = Slab::new(64, 256);
+    unsafe {
+        let layout = Layout::from_size_align_unchecked(256, 8);
+        let ptr = System.alloc(layout);
+        slab.init(NonNull::new_unchecked(ptr));
+        
+        assert!(slab.is_empty());
+        assert!(!slab.is_partial());
+        
+        let obj = slab.alloc().unwrap();
+        assert!(slab.is_partial());
+        assert_eq!(slab.used_count(), 1);
+        
+        for _ in 0..3 {
+            slab.alloc();
+        }
+        assert!(slab.is_full());
+        assert!(!slab.is_partial());
+        assert_eq!(slab.used_count(), 4);
+        
+        slab.dealloc(obj);
+        assert!(slab.is_partial());
+        
+        System.dealloc(ptr, layout);
+    }
+}
+
+#[test]
+fn test_cache_stats() {
+    let mut cache = SCache::new(64);
+    unsafe {
+        let layout = Layout::from_size_align_unchecked(4096, 8);
+        let ptr1 = System.alloc(layout);
+        let ptr2 = System.alloc(layout);
+        
+        let mut slab1 = Slab::new(64, 4096);
+        let mut slab2 = Slab::new(64, 4096);
+        
+        slab1.init(NonNull::new_unchecked(ptr1));
+        slab2.init(NonNull::new_unchecked(ptr2));
+        
+        let slab1_static: &'static mut Slab = core::mem::transmute(&mut slab1);
+        let slab2_static: &'static mut Slab = core::mem::transmute(&mut slab2);
+        
+        cache.insert(slab1_static);
+        cache.insert(slab2_static);
+        
+        cache.alloc();
+        cache.alloc();
+        
+        let stats = cache.stats();
+        assert_eq!(stats.partial_slabs, 2);
+        assert_eq!(stats.used_objects, 2);
+        
+        System.dealloc(ptr1, layout);
+        System.dealloc(ptr2, layout);
+    }
+}

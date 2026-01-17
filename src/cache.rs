@@ -1,6 +1,13 @@
 use crate::slab::Slab;
 use core::ptr::NonNull;
 
+pub struct CacheStats {
+    pub partial_slabs: usize,
+    pub full_slabs: usize,
+    pub total_objects: usize,
+    pub used_objects: usize,
+}
+
 pub struct SCache {
     partial: Option<&'static mut Slab>,
     full: Option<&'static mut Slab>,
@@ -56,5 +63,35 @@ impl SCache {
             current = slab.next.as_deref_mut();
         }
         false
+    }
+
+    pub fn stats(&self) -> CacheStats {
+        let mut partial_count = 0;
+        let mut full_count = 0;
+        let mut total_objects = 0;
+        let mut used_objects = 0;
+
+        let mut current = self.partial.as_ref();
+        while let Some(slab) = current {
+            partial_count += 1;
+            total_objects += slab.capacity();
+            used_objects += slab.used_count();
+            current = slab.next.as_ref();
+        }
+
+        let mut current = self.full.as_ref();
+        while let Some(slab) = current {
+            full_count += 1;
+            total_objects += slab.capacity();
+            used_objects += slab.used_count();
+            current = slab.next.as_ref();
+        }
+
+        CacheStats {
+            partial_slabs: partial_count,
+            full_slabs: full_count,
+            total_objects,
+            used_objects,
+        }
     }
 }
