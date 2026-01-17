@@ -8,6 +8,7 @@ name = "slab_allocator"
 path = "src/lib.rs"
 
 [dependencies]
+spin = "0.9.8"
 
 [dev-dependencies]
 
