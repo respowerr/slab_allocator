@@ -52,6 +52,10 @@ impl SlabAllocator {
         None
     }
 
+    /// # Safety
+    /// Unsafe because :
+    /// - Accesses mutable static memory HEAP_MEMORY which is not thread safe without external sync.
+    /// - Dereferences raw pointers to initialize the Slab structure manually.
     unsafe fn refill(&self, cache_idx: usize) -> bool {
         let page_ptr = alloc_page();
         if page_ptr.is_null() {
